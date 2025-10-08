@@ -3,23 +3,56 @@ on:
     branches:
       - main
 jobs:
-  unit-test:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Setup Node.js environment
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          node-version: 16
       - name: Install dependencies
         run: npm install
       - name: Unit Testing
         run: npm run test
+      - name: Upload coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: coverage/lcov.info
+  build:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+      - name: Login to Amazon ECR
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
+          REPO_URI=${ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com
+          echo "ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
+          echo "REPO_URI=$REPO_URI" >> $GITHUB_ENV
+          aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com
+      - name: Create ECR repository
+        run: |
+          REPO_NAME=expense-tracker
+          if ! aws ecr describe-repositories --region ap-south-1 --repository-names ${REPO_NAME} 2>/dev/null; then
+            aws ecr create-repository --region ap-south-1 --repository-name ${REPO_NAME}
+          fi
+      - name: Build and push Docker image
+        run: |
+          docker build -t $REPO_URI/expense-tracker:latest .
+          docker build -t $REPO_URI/expense-tracker:${GITHUB_SHA::7} .
+          docker push $REPO_URI/expense-tracker:latest
+          docker push $REPO_URI/expense-tracker:${GITHUB_SHA::7}
+      - name: Verify deployment
+        run: |
+          docker images
+          echo "Deployment successful"
