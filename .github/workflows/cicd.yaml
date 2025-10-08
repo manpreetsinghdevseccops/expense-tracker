@@ -46,7 +46,7 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Unit Testing
-        run: ng test
+        run: npm test
   build:
     runs-on: ubuntu-latest
     needs: unit-test
