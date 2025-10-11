@@ -43,7 +43,7 @@ jobs:
       - name: Setup Node.js environment
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version: 16
       - name: Install dependencies
         run: npm install
       - name: Unit Testing
@@ -75,10 +75,12 @@ jobs:
           fi
       - name: Build and push Docker image
         run: |
-          docker build -t $REPO_URI/${GITHUB_REPOSITORY##*/}:latest .
-          docker tag $REPO_URI/${GITHUB_REPOSITORY##*/}:latest $REPO_URI/${GITHUB_REPOSITORY##*/}:${GITHUB_SHA:0:7}
-          docker push $REPO_URI/${GITHUB_REPOSITORY##*/}:latest
-          docker push $REPO_URI/${GITHUB_REPOSITORY##*/}:${GITHUB_SHA:0:7}
+          REPO_NAME=${GITHUB_REPOSITORY##*/}
+          docker build -t $REPO_NAME:latest .
+          docker tag $REPO_NAME:latest $REPO_URI/$REPO_NAME:latest
+          docker tag $REPO_NAME:latest $REPO_URI/$REPO_NAME:${GITHUB_SHA:0:7}
+          docker push $REPO_URI/$REPO_NAME:latest
+          docker push $REPO_URI/$REPO_NAME:${GITHUB_SHA:0:7}
       - name: Verify deployment
         run: |
           docker images
