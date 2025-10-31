@@ -40,10 +40,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Setup Node.js environment
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: '16'
       - name: Install dependencies
         run: npm install
       - name: Unit Testing
@@ -85,9 +85,9 @@ jobs:
         run: |
           ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
           echo "ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
-          REPO_URI=$ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com
+          REPO_URI=${ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com
           echo "REPO_URI=$REPO_URI" >> $GITHUB_ENV
-          aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin $REPO_URI
+          aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com
       - name: Create ECR repository
         run: |
           REPO_NAME=${GITHUB_REPOSITORY##*/}
